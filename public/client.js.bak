@@ -1,0 +1,381 @@
+const socket = io();
+
+const loginScreen = document.getElementById('login-screen');
+const chatScreen = document.getElementById('chat-screen');
+const adminScreen = document.getElementById('admin-screen');
+
+const directLoginForm = document.getElementById('direct-login-form');
+const emailInput = document.getElementById('email-input');
+const passInput = document.getElementById('pass-input');
+const authStatus = document.getElementById('auth-status');
+const modeBtns = document.querySelectorAll('.mode-btn');
+
+const videoSection = document.getElementById('video-section');
+const localVideo = document.getElementById('local-video');
+const remoteVideo = document.getElementById('remote-video');
+const videoOverlay = document.getElementById('video-overlay');
+const modeTag = document.getElementById('mode-tag');
+const userBadge = document.getElementById('user-badge');
+const reportBtn = document.getElementById('report-btn');
+const logoutBtn = document.getElementById('logout-btn');
+
+const chatBox = document.getElementById('chat-box');
+const actionBtn = document.getElementById('action-btn');
+const msgInput = document.getElementById('msg-input');
+const sendBtn = document.getElementById('send-btn');
+const typingIndicator = document.getElementById('typing-indicator');
+
+let selectedMode = 'video';
+let chatState = 'IDLE';
+let localStream = null;
+let peerConnection = null;
+let typingTimeout = null;
+
+const rtcConfig = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+};
+
+const savedToken = localStorage.getItem('msruas_session_token');
+const savedMode = localStorage.getItem('msruas_chat_mode');
+if (savedMode) selectedMode = savedMode;
+if (savedToken) {
+    socket.emit('resume_session', savedToken);
+}
+
+socket.on('session_invalid', () => {
+    localStorage.removeItem('msruas_session_token');
+});
+
+modeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        modeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedMode = btn.dataset.mode;
+        localStorage.setItem('msruas_chat_mode', selectedMode);
+    });
+});
+
+directLoginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    socket.emit('direct_login', {
+        email: emailInput.value.trim(),
+        password: passInput.value
+    });
+});
+
+socket.on('auth_error', (msg) => {
+    authStatus.textContent = msg;
+    authStatus.classList.add('error');
+});
+
+socket.on('login_success', async ({ token, studentInfo }) => {
+    localStorage.setItem('msruas_session_token', token);
+    loginScreen.classList.add('hidden');
+    chatScreen.classList.remove('hidden');
+    userBadge.textContent = `${studentInfo.batch} • ${studentInfo.branch}`;
+
+    if (selectedMode === 'video') {
+        modeTag.textContent = '📹 Video + Text';
+        await initCamera();
+    } else {
+        modeTag.textContent = '💬 Text Only';
+        videoSection.classList.add('hidden');
+    }
+});
+
+logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('msruas_session_token');
+    socket.emit('logout');
+    location.reload();
+});
+
+socket.on('force_logout', (reason) => {
+    localStorage.removeItem('msruas_session_token');
+    alert(reason);
+    location.reload();
+});
+
+async function initCamera() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+    } catch (err) {
+        appendSystemMessage('⚠️ Camera/Mic blocked. Switched to Text-Only mode.');
+        selectedMode = 'text';
+        videoSection.classList.add('hidden');
+        modeTag.textContent = '💬 Text Only';
+    }
+}
+
+function handleActionButton() {
+    if (chatState === 'IDLE') {
+        startSearch();
+    } else if (chatState === 'CHATTING') {
+        chatState = 'CONFIRM_STOP';
+        actionBtn.textContent = 'Really?';
+        actionBtn.className = 'ctrl-btn confirm';
+    } else if (chatState === 'CONFIRM_STOP' || chatState === 'WAITING') {
+        socket.emit('skip_partner');
+        closeWebRTC();
+        appendSystemMessage('Disconnected.');
+        resetToIdle();
+    }
+}
+
+actionBtn.addEventListener('click', handleActionButton);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !chatScreen.classList.contains('hidden')) handleActionButton();
+});
+
+function startSearch() {
+    chatBox.innerHTML = '';
+    closeWebRTC();
+    chatState = 'WAITING';
+    actionBtn.textContent = 'Stop';
+    actionBtn.className = 'ctrl-btn stop';
+    msgInput.disabled = true;
+    sendBtn.disabled = true;
+    videoOverlay.classList.remove('hidden');
+    videoOverlay.textContent = 'Searching MSRUAS network...';
+    socket.emit('find_partner', selectedMode);
+}
+
+function resetToIdle() {
+    chatState = 'IDLE';
+    actionBtn.textContent = 'Next';
+    actionBtn.className = 'ctrl-btn start';
+    msgInput.disabled = true;
+    sendBtn.disabled = true;
+    typingIndicator.classList.add('hidden');
+    videoOverlay.classList.remove('hidden');
+    videoOverlay.textContent = 'Click Next to find a peer';
+}
+
+socket.on('waiting', () => appendSystemMessage('Looking for another MSRUAS student...'));
+
+socket.on('match_found', async (data) => {
+    chatBox.innerHTML = '';
+    chatState = 'CHATTING';
+    actionBtn.textContent = 'Stop';
+    actionBtn.className = 'ctrl-btn stop';
+    msgInput.disabled = false;
+    sendBtn.disabled = false;
+    msgInput.focus();
+
+    appendSystemMessage(`Connected with a ${data.batch} student (${data.branch})!`);
+
+    if (selectedMode === 'video' && localStream) {
+        videoOverlay.classList.add('hidden');
+        setupPeerConnection(data.initiator);
+    }
+});
+
+async function setupPeerConnection(isInitiator) {
+    peerConnection = new RTCPeerConnection(rtcConfig);
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+    peerConnection.ontrack = (event) => { remoteVideo.srcObject = event.streams[0]; };
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) socket.emit('webrtc_ice_candidate', event.candidate);
+    };
+
+    if (isInitiator) {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('webrtc_offer', offer);
+    }
+}
+
+socket.on('webrtc_offer', async (offer) => {
+    if (!peerConnection) return;
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    socket.emit('webrtc_answer', answer);
+});
+
+socket.on('webrtc_answer', async (answer) => {
+    if (peerConnection) await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+});
+
+socket.on('webrtc_ice_candidate', async (candidate) => {
+    if (peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+});
+
+function closeWebRTC() {
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    remoteVideo.srcObject = null;
+}
+
+socket.on('partner_disconnected', () => {
+    closeWebRTC();
+    appendSystemMessage('Stranger has disconnected.');
+    resetToIdle();
+});
+
+function sendMessage() {
+    const text = msgInput.value.trim();
+    if (!text || chatState !== 'CHATTING') return;
+
+    appendMessage(text, 'you');
+    socket.emit('send_message', text);
+    socket.emit('typing', false);
+    msgInput.value = '';
+}
+
+sendBtn.addEventListener('click', sendMessage);
+msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+socket.on('receive_message', (text) => {
+    typingIndicator.classList.add('hidden');
+    appendMessage(text, 'stranger');
+});
+
+msgInput.addEventListener('input', () => {
+    if (chatState === 'CHATTING') {
+        socket.emit('typing', true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => socket.emit('typing', false), 1200);
+    }
+});
+
+socket.on('partner_typing', (isTyping) => typingIndicator.classList.toggle('hidden', !isTyping));
+
+reportBtn.addEventListener('click', () => {
+    if (chatState !== 'CHATTING') {
+        alert('You can only report someone during an active chat.');
+        return;
+    }
+    const reason = prompt('Reason for flagging this student (Spam, Violence, Nudity):');
+    if (reason !== null) {
+        socket.emit('report_partner', reason || 'Inappropriate Behavior');
+        closeWebRTC();
+        appendSystemMessage('🚩 Student flagged to Admin Command Center and disconnected.');
+        resetToIdle();
+    }
+});
+
+function appendMessage(text, sender) {
+    const div = document.createElement('div');
+    div.classList.add('msg', sender);
+    div.textContent = text;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function appendSystemMessage(text) {
+    const div = document.createElement('div');
+    div.classList.add('sys-msg');
+    div.textContent = text;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+socket.on('admin_authenticated', (stats) => {
+    loginScreen.classList.add('hidden');
+    adminScreen.classList.remove('hidden');
+    renderAdminStats(stats);
+});
+
+socket.on('admin_stats_update', (stats) => {
+    renderAdminStats(stats);
+});
+
+function renderAdminStats(stats) {
+    document.getElementById('stat-online').textContent = stats.onlineStudents;
+    document.getElementById('stat-registered').textContent = stats.totalRegistered;
+    document.getElementById('stat-active-chats').textContent = stats.activeCallsOrChats;
+    document.getElementById('stat-matches').textContent = stats.totalMatchesMade;
+    document.getElementById('stat-flagged').textContent = stats.totalFlagged;
+    document.getElementById('stat-banned').textContent = stats.totalBanned;
+
+    // Live Branch Pills
+    const branchBox = document.getElementById('branch-pills');
+    const branches = Object.entries(stats.branchBreakdown);
+    if (branches.length === 0) {
+        branchBox.innerHTML = '<span class="tag">No students online yet</span>';
+    } else {
+        branchBox.innerHTML = branches
+            .map(([branch, count]) => `<span class="tag">🎓 ${branch}: <b>${count}</b></span>`)
+            .join('');
+    }
+
+    // Registered Student IDs (Reset / Delete)
+    const regList = document.getElementById('registered-list');
+    if (!stats.usersList || stats.usersList.length === 0) {
+        regList.innerHTML = '<p class="empty-state">No student IDs registered yet.</p>';
+    } else {
+        regList.innerHTML = '';
+        stats.usersList.forEach(u => {
+            const row = document.createElement('div');
+            row.className = 'report-card';
+            row.style.background = 'rgba(99, 102, 241, 0.08)';
+            row.style.borderColor = 'rgba(99, 102, 241, 0.25)';
+            row.innerHTML = `
+                <div class="report-info">
+                    <p><b>Student ID:</b> <span style="color:#a5b4fc">${u.email}</span></p>
+                    <p><b>Batch & Branch:</b> ${u.batch} • ${u.branch}</p>
+                </div>
+                <div class="report-actions">
+                    <button class="dismiss-btn" onclick="resetUser('${u.email}')">Reset / Delete ID</button>
+                    <button class="ban-btn" onclick="banUser('${u.email}')">Ban ID</button>
+                </div>
+            `;
+            regList.appendChild(row);
+        });
+    }
+
+    // Flagged Reports
+    const reportsList = document.getElementById('reports-list');
+    if (stats.reports.length === 0) {
+        reportsList.innerHTML = '<p class="empty-state">No flagged incidents yet. Campus is clean!</p>';
+    } else {
+        reportsList.innerHTML = '';
+        stats.reports.forEach(rep => {
+            const card = document.createElement('div');
+            card.className = 'report-card';
+            card.innerHTML = `
+                <div class="report-info">
+                    <p><b>Flagged ID:</b> <span style="color:#f87171">${rep.offenderEmail}</span> (${rep.offenderBranch}) • ${rep.timestamp}</p>
+                    <p><b>Reason:</b> ${rep.reason} | <b>Flagged By:</b> ${rep.reporterEmail}</p>
+                    <p><b>Message/Evidence:</b> "${rep.content}"</p>
+                </div>
+                <div class="report-actions">
+                    <button class="ban-btn" onclick="banUser('${rep.offenderEmail}')">Ban ID</button>
+                    <button class="dismiss-btn" onclick="clearReport('${rep.id}')">Dismiss</button>
+                </div>
+            `;
+            reportsList.appendChild(card);
+        });
+    }
+
+    // Banned List
+    const bannedBox = document.getElementById('banned-list');
+    if (stats.bannedList.length === 0) {
+        bannedBox.innerHTML = '<span class="tag">No suspended IDs</span>';
+    } else {
+        bannedBox.innerHTML = stats.bannedList
+            .map(email => `<button class="unban-btn" onclick="unbanUser('${email}')">⛔ ${email} (Click to Unban)</button>`)
+            .join('');
+    }
+}
+
+window.resetUser = (email) => {
+    if (confirm(`Delete/Reset registration for ${email}? The student will be able to set a new password.`)) {
+        socket.emit('admin_reset_user', email);
+    }
+};
+window.resetAllUsers = () => {
+    if (confirm('Clear ALL registered student IDs? Everyone will have to register again.')) {
+        socket.emit('admin_reset_all_users');
+    }
+};
+window.banUser = (email) => socket.emit('admin_ban_user', email);
+window.unbanUser = (email) => socket.emit('admin_unban_user', email);
+window.clearReport = (id) => socket.emit('admin_clear_report', id);

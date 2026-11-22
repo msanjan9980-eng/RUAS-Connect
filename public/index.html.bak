@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSRUAS Connect | Campus Video & Text Lounge</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <!-- SCREEN 1: MSRUAS LOGIN GATEWAY -->
+    <div id="login-screen" class="center-container">
+        <div class="glass-panel login-card">
+            <div class="campus-pill">
+                <span class="pulse-dot"></span> MSRUAS VERIFIED NETWORK
+            </div>
+            <h1>Campus Stranger Chat.</h1>
+            <p class="subtitle">Connect 1-on-1 via video & text exclusively with Ramaiah University students using your <b>@msruas.ac.in</b> ID.</p>
+
+            <form id="direct-login-form">
+                <div class="input-group">
+                    <label>MSRUAS Student Email</label>
+                    <input type="email" id="email-input" placeholder="25etcs002270@msruas.ac.in" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label>Create / Enter Password</label>
+                    <input type="password" id="pass-input" placeholder="Min 6 characters" required>
+                </div>
+
+                <div class="mode-selector">
+                    <button type="button" class="mode-btn active" data-mode="video">📹 Video + Text</button>
+                    <button type="button" class="mode-btn" data-mode="text">💬 Text Only</button>
+                </div>
+
+                <button type="submit" class="glow-btn">Enter Campus Lounge →</button>
+            </form>
+
+            <p id="auth-status" class="status-msg"></p>
+            <div class="footer-note">
+                🔒 Stays logged in until you click Logout • Email hidden from peers
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: OMEGLE VIDEO & TEXT LOUNGE -->
+    <div id="chat-screen" class="app-layout hidden">
+        <header class="topbar">
+            <div class="logo-area">
+                <span class="pulse-dot"></span>
+                <h2>MSRUAS<span>Connect</span></h2>
+            </div>
+            <div class="header-right">
+                <span id="mode-tag" class="tag">📹 Video + Text</span>
+                <span id="user-badge" class="user-chip">Verified</span>
+                <button id="report-btn" class="report-btn">🚩 Report</button>
+                <button id="logout-btn" class="logout-btn">Logout</button>
+            </div>
+        </header>
+
+        <main class="workspace">
+            <section id="video-section" class="video-panel">
+                <div class="video-card remote-card">
+                    <video id="remote-video" autoplay playsinline></video>
+                    <div id="video-overlay" class="video-status">Click Start to connect...</div>
+                    <div class="cam-label">Stranger</div>
+                </div>
+                <div class="video-card local-card">
+                    <video id="local-video" autoplay muted playsinline></video>
+                    <div class="cam-label">You</div>
+                </div>
+            </section>
+
+            <section class="chat-panel">
+                <div id="chat-box" class="messages-area">
+                    <div class="sys-msg">You're verified! Click <b>Start</b> below to meet a random MSRUAS student.</div>
+                </div>
+
+                <div id="typing-indicator" class="typing-bar hidden">Stranger is typing...</div>
+
+                <div class="controls-bar">
+                    <button id="action-btn" class="ctrl-btn start">Start</button>
+                    <input type="text" id="msg-input" placeholder="Say hi to your campus peer..." disabled autocomplete="off">
+                    <button id="send-btn" class="send-btn" disabled>Send</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- SCREEN 3: ADMIN ANALYTICS & SAFETY CENTER -->
+    <div id="admin-screen" class="app-layout hidden">
+        <header class="topbar">
+            <div class="logo-area">
+                <h2>🛡️ MSRUAS <span>Admin Command Center</span></h2>
+            </div>
+            <button onclick="location.reload()" class="logout-btn">Admin Logout</button>
+        </header>
+
+        <div class="admin-content">
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <h3 id="stat-online">0</h3>
+                    <p>Students Online</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="stat-registered">0</h3>
+                    <p>Registered IDs</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="stat-active-chats">0</h3>
+                    <p>Active Chats</p>
+                </div>
+                <div class="stat-box">
+                    <h3 id="stat-matches">0</h3>
+                    <p>Total Matches</p>
+                </div>
+                <div class="stat-box danger">
+                    <h3 id="stat-flagged">0</h3>
+                    <p>Flagged Incidents</p>
+                </div>
+                <div class="stat-box danger">
+                    <h3 id="stat-banned">0</h3>
+                    <p>Banned IDs</p>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3 class="section-title">📊 Live Branch Activity</h3>
+                <div id="branch-pills" class="branch-pills">
+                    <span class="tag">No students online yet</span>
+                </div>
+            </div>
+
+            <!-- Registered IDs Management (Reset / Delete IDs) -->
+            <div class="admin-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h3 class="section-title" style="margin:0;">🎓 Registered Student IDs (Reset / Delete)</h3>
+                    <button class="ban-btn" onclick="resetAllUsers()">Reset All IDs</button>
+                </div>
+                <div id="registered-list" class="reports-container">
+                    <p class="empty-state">No student IDs registered yet.</p>
+                </div>
+            </div>
+
+            <!-- Flagged Spam / Violence Logs -->
+            <div class="admin-section">
+                <h3 class="section-title">🚨 Flagged Spam & Violent Content Logs</h3>
+                <div id="reports-list" class="reports-container">
+                    <p class="empty-state">No flagged incidents yet. Campus is clean!</p>
+                </div>
+            </div>
+
+            <!-- Suspended IDs List -->
+            <div class="admin-section">
+                <h3 class="section-title">⛔ Suspended Student IDs</h3>
+                <div id="banned-list" class="branch-pills">
+                    <span class="tag">No suspended IDs</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>

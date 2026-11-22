@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#F8F9FA">
+    <title>CampusLink | Verified Student Network</title>
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- SCREEN 1: LOGIN GATEWAY -->
+    <div id="login-screen" class="login-wrapper">
+        <div class="login-card">
+            <div class="brand-header">
+                <div class="logo-mark">CL</div>
+                <h1>CampusLink</h1>
+            </div>
+            <h2>Welcome back.</h2>
+            <p class="subtitle">Connect 1-on-1 exclusively with verified 25-batch students.</p>
+
+            <form id="direct-login-form" novalidate>
+                <div class="input-group">
+                    <label for="email-input">Student Email</label>
+                    <input type="email" id="email-input"
+                           placeholder="25etcs002270@msruas.ac.in"
+                           pattern="25.+@msruas\.ac\.in$"
+                           title="Student email must start with 25"
+                           autocomplete="username"
+                           required>
+                </div>
+                <div class="input-group">
+                    <label for="pass-input">Password</label>
+                    <input type="password" id="pass-input"
+                           placeholder="Min 6 characters"
+                           minlength="6"
+                           autocomplete="current-password"
+                           required>
+                </div>
+
+                <div class="mode-selector" role="group" aria-label="Chat mode">
+                    <button type="button" class="mode-btn active" data-mode="video" aria-pressed="true">📹 Video</button>
+                    <button type="button" class="mode-btn" data-mode="text" aria-pressed="false">💬 Text Only</button>
+                </div>
+
+                <button type="submit" class="primary-btn">Enter Lounge</button>
+            </form>
+
+            <p id="auth-status" class="status-msg" role="status" aria-live="polite"></p>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: CHAT LOUNGE -->
+    <div id="chat-screen" class="app-layout hidden">
+        <h1 class="sr-only">CampusLink Chat Lounge</h1>
+        
+        <header class="topbar">
+            <div class="logo-area">
+                <div class="logo-mark-sm">CL</div>
+                <h2>CampusLink</h2>
+            </div>
+            <div class="header-right">
+                <span id="mode-tag" class="tag">📹 Video</span>
+                <span id="user-badge" class="user-chip">25-Batch</span>
+                <button id="report-btn" class="icon-btn danger" type="button" title="Report">🚨</button>
+                <button id="logout-btn" class="outline-btn" type="button">Logout</button>
+            </div>
+        </header>
+
+        <main class="workspace">
+            <section id="video-section" class="video-panel" aria-label="Video">
+                <div class="video-card remote-card">
+                    <video id="remote-video" autoplay playsinline></video>
+                    <div id="video-overlay" class="video-status">
+                        <div class="spinner"></div>
+                        <span>Ready to connect</span>
+                    </div>
+                    <div class="cam-label">Stranger</div>
+                </div>
+                <div class="video-card local-card">
+                    <video id="local-video" autoplay muted playsinline></video>
+                    <div class="cam-label">You</div>
+                </div>
+            </section>
+
+            <section class="chat-panel" aria-label="Chat">
+                <div id="chat-box" class="messages-area" role="log" aria-live="polite" aria-label="Chat messages">
+                    <div class="sys-msg">Connected securely. Click <b>Start</b> to meet someone.</div>
+                </div>
+
+                <div id="typing-indicator" class="typing-bar hidden" aria-live="polite">Stranger is typing...</div>
+
+                <div class="controls-bar">
+                    <button id="action-btn" class="ctrl-btn start" type="button">Start</button>
+                    <div class="input-wrapper">
+                        <input type="text" id="msg-input" placeholder="Type a message..." disabled autocomplete="off" aria-label="Message">
+                    </div>
+                    <button id="send-btn" class="primary-btn send-btn" type="button" disabled>Send</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- SCREEN 3: ADMIN DASHBOARD -->
+    <div id="admin-screen" class="app-layout hidden">
+        <h1 class="sr-only">CampusLink Admin</h1>
+        
+        <header class="topbar">
+            <div class="logo-area">
+                <div class="logo-mark-sm" style="background: #111; color: white;">A</div>
+                <h2>Admin Console</h2>
+            </div>
+            <button onclick="location.reload()" class="outline-btn" type="button">Exit</button>
+        </header>
+
+        <div class="admin-content">
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-icon">🟢</div>
+                    <div class="stat-info">
+                        <h3 id="stat-online">0</h3>
+                        <p>Students Online</p>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <h3 id="stat-registered">0</h3>
+                        <p>Active Sessions</p>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">💬</div>
+                    <div class="stat-info">
+                        <h3 id="stat-active-chats">0</h3>
+                        <p>Ongoing Chats</p>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">🔗</div>
+                    <div class="stat-info">
+                        <h3 id="stat-matches">0</h3>
+                        <p>Total Matches</p>
+                    </div>
+                </div>
+                <div class="stat-box danger-box">
+                    <div class="stat-icon">🚨</div>
+                    <div class="stat-info">
+                        <h3 id="stat-flagged">0</h3>
+                        <p>Flagged Reports</p>
+                    </div>
+                </div>
+                <div class="stat-box danger-box">
+                    <div class="stat-icon">⛔</div>
+                    <div class="stat-info">
+                        <h3 id="stat-banned">0</h3>
+                        <p>Banned Users</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3 class="section-title">📊 Live Branch Activity</h3>
+                <div id="branch-pills" class="branch-pills">
+                    <span class="tag">No one online</span>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <div class="section-header-row">
+                    <h3 class="section-title">🎓 Active Sessions</h3>
+                    <button class="danger-btn" onclick="resetAllUsers()" type="button">Purge All</button>
+                </div>
+                <div id="registered-list" class="reports-container">
+                    <p class="empty-state">No active sessions.</p>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3 class="section-title">🚨 Flagged Logs</h3>
+                <div id="reports-list" class="reports-container">
+                    <p class="empty-state">No flagged incidents.</p>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3 class="section-title">⛔ Banned IDs</h3>
+                <div id="banned-list" class="branch-pills">
+                    <span class="tag">No banned IDs</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
