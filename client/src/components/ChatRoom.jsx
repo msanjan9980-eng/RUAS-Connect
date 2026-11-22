@@ -91,48 +91,59 @@ export default function ChatRoom({ user }) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-[100dvh] w-full flex flex-col lg:flex-row bg-base text-white overflow-hidden">
-      <div className="flex-1 relative flex flex-col p-4 lg:p-6 border-b lg:border-b-0 lg:border-r border-border/50 min-h-0">
-        <div className="flex flex-row justify-between items-center mb-3 lg:mb-6 shrink-0 gap-2">
-          <div className="flex items-center gap-4">
-            <span className="font-serif italic text-2xl">CampusLink.</span>
-            <span className="hidden sm:inline-block text-xs font-medium tracking-widest uppercase text-muted border border-border px-3 py-1 rounded-full">{user?.batch} / {user?.branch}</span>
-          </div>
+    <div className="h-[100dvh] w-full flex flex-col lg:flex-row bg-base text-white overflow-hidden">
+      
+      {/* Top Area (Video) */}
+      <div className="flex-1 relative flex flex-col p-4 border-b lg:border-b-0 lg:border-r border-border/50 min-h-0">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center mb-3 shrink-0">
           <div className="flex items-center gap-3">
+            <span className="font-serif italic text-xl lg:text-2xl">CampusLink.</span>
+            <span className="hidden sm:inline-block text-[10px] lg:text-xs font-medium tracking-widest uppercase text-muted border border-border px-3 py-1 rounded-full">
+              {user?.batch} / {user?.branch}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
             <button onClick={() => { socket.emit('report_partner', 'Reported'); closeWebRTC(); setChatState('IDLE'); }} className="p-2 text-muted hover:text-red-400 transition-colors"><AlertTriangle size={18} /></button>
             <button onClick={() => { localStorage.removeItem('campuslink_token'); window.location.reload(); }} className="p-2 text-muted hover:text-white transition-colors"><LogOut size={18} /></button>
           </div>
         </div>
 
-        <div className="flex-[1.6] flex flex-col gap-2 lg:gap-4 min-h-0">
-          <div className="flex-[2] bg-surface rounded-2xl border border-border overflow-hidden relative">
-            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-            {chatState !== 'CHATTING' && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-                {chatState === 'WAITING' ? (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-sm tracking-widest uppercase text-accent">Scanning network</p>
-                  </div>
-                ) : (
-                  <button onClick={startSearch} className="bg-white text-black px-8 py-3 rounded-full font-medium hover:bg-accent transition-colors">Initialize Match</button>
-                )}
-              </div>
-            )}
-            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1 rounded-md text-xs tracking-wider uppercase">Remote</div>
-          </div>
-          <div className="flex-1 bg-surface rounded-2xl border border-border overflow-hidden relative">
+        {/* Video Container */}
+        <div className="flex-1 bg-surface rounded-2xl border border-border overflow-hidden relative">
+          <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+          
+          {/* Local Video (PiP - Top Right so it never blocks the button) */}
+          <div className="absolute top-4 right-4 w-24 h-32 lg:w-48 lg:h-64 bg-black rounded-xl lg:rounded-2xl border border-border overflow-hidden shadow-2xl z-20">
             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1 rounded-md text-xs tracking-wider uppercase">You</div>
+            <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">You</div>
           </div>
+
+          {/* Status Overlay */}
+          {chatState !== 'CHATTING' && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm z-10">
+              {chatState === 'WAITING' ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-xs lg:text-sm tracking-widest uppercase text-accent">Scanning network</p>
+                </div>
+              ) : (
+                <button onClick={startSearch} className="bg-white text-black px-6 py-2.5 lg:px-8 lg:py-3 rounded-full font-medium hover:bg-accent transition-colors z-30 shadow-lg">
+                  Initialize Match
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="w-full lg:w-96 h-[35vh] lg:h-auto flex flex-col bg-base shrink-0 border-t lg:border-t-0 border-border/50">
-        <div className="p-4 lg:p-6 border-b border-border/50 shrink-0">
-          <h2 className="text-lg font-serif">Transmission log</h2>
+      {/* Bottom Area (Chat) */}
+      <div className="w-full lg:w-96 h-[45vh] lg:h-auto flex flex-col bg-base shrink-0 z-30">
+        <div className="p-3 lg:p-6 border-b border-border/50 shrink-0">
+          <h2 className="text-sm lg:text-lg font-serif">Transmission log</h2>
         </div>
-        <div ref={chatBoxRef} className="flex-1 p-4 lg:p-6 overflow-y-auto custom-scrollbar space-y-4 lg:space-y-6">
+        <div ref={chatBoxRef} className="flex-1 p-3 lg:p-6 overflow-y-auto custom-scrollbar space-y-3 lg:space-y-6">
           <AnimatePresence>
             {messages.map((m) => (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={m.id} className={`flex flex-col ${m.sender === 'you' ? 'items-end' : m.sender === 'system' ? 'items-center' : 'items-start'}`}>
@@ -141,7 +152,7 @@ export default function ChatRoom({ user }) {
                 ) : (
                   <>
                     <span className="text-[10px] text-muted mb-1 px-1">{m.sender === 'you' ? 'You' : 'Stranger'}</span>
-                    <div className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed ${m.sender === 'you' ? 'bg-white text-black rounded-2xl rounded-tr-sm' : 'bg-surface border border-border text-white rounded-2xl rounded-tl-sm'}`}>{m.text}</div>
+                    <div className={`max-w-[85%] px-4 py-2 lg:py-3 text-sm leading-relaxed ${m.sender === 'you' ? 'bg-white text-black rounded-2xl rounded-tr-sm' : 'bg-surface border border-border text-white rounded-2xl rounded-tl-sm'}`}>{m.text}</div>
                   </>
                 )}
               </motion.div>
@@ -149,13 +160,13 @@ export default function ChatRoom({ user }) {
           </AnimatePresence>
           {isTyping && <div className="text-[10px] tracking-widest uppercase text-accent animate-pulse">Stranger is typing</div>}
         </div>
-        <div className="p-3 lg:p-4 border-t border-border/50 bg-surface">
+        <div className="p-3 lg:p-4 border-t border-border/50 bg-surface shrink-0">
           <form onSubmit={sendMessage} className="relative flex items-center">
-            <input type="text" value={input} onChange={handleTyping} disabled={chatState !== 'CHATTING'} placeholder={chatState === 'CHATTING' ? "Type message..." : "Waiting for connection..."} className="w-full bg-base border border-border rounded-full py-3 pl-5 pr-12 text-sm focus:outline-none focus:border-accent disabled:opacity-50 transition-colors placeholder:text-muted" />
-            <button disabled={chatState !== 'CHATTING'} type="submit" className="absolute right-2 p-2 bg-accent text-black rounded-full hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"><Send size={16} /></button>
+            <input type="text" value={input} onChange={handleTyping} disabled={chatState !== 'CHATTING'} placeholder={chatState === 'CHATTING' ? "Type message..." : "Waiting for connection..."} className="w-full bg-base border border-border rounded-full py-2 lg:py-3 pl-5 pr-12 text-xs lg:text-sm focus:outline-none focus:border-accent disabled:opacity-50 transition-colors placeholder:text-muted" />
+            <button disabled={chatState !== 'CHATTING'} type="submit" className="absolute right-1.5 p-1.5 lg:right-2 lg:p-2 bg-accent text-black rounded-full hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"><Send size={14} className="lg:w-4 lg:h-4" /></button>
           </form>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
