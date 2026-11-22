@@ -17,7 +17,7 @@ export default function AdminDashboard() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-base text-white p-8 lg:p-12 relative z-10">
-      <header className="flex justify-between items-end mb-16 border-b border-border/50 pb-8">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8 lg:mb-16 border-b border-border/50 pb-6 lg:pb-8">
         <div>
           <h1 className="text-4xl font-serif tracking-tight">Command Center.</h1>
           <p className="text-muted text-sm mt-2 uppercase tracking-widest">Network telemetry &amp; moderation</p>
@@ -27,7 +27,7 @@ export default function AdminDashboard() {
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8 lg:mb-12">
         {[
           { label: 'Online Nodes', value: stats.onlineStudents, icon: <Users size={16} /> },
           { label: 'Active Streams', value: stats.activeCallsOrChats, icon: <Activity size={16} /> },
@@ -44,7 +44,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         <div className="bg-surface border border-border/50 rounded-2xl p-6">
           <h2 className="text-xl font-serif mb-6 border-b border-border/50 pb-4">Active Nodes</h2>
           <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
