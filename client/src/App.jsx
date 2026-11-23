@@ -12,6 +12,7 @@ const socket = io(import.meta.env.VITE_BACKEND_URL || window.location.origin);
 export default function App() {
   const [screen, setScreen] = useState('login');
   const [user, setUser] = useState(null);
+  const [chatMode, setChatMode] = useState('video');
 
   useEffect(() => {
     socket.on('login_success', (data) => { setUser(data.studentInfo); setScreen('chat'); });
@@ -26,8 +27,8 @@ export default function App() {
     <SocketContext.Provider value={socket}>
       <div className="noise-bg"></div>
       <AnimatePresence mode="wait">
-        {screen === 'login' && <Login key="login" />}
-        {screen === 'chat' && <ChatRoom key="chat" user={user} />}
+        {screen === 'login' && <Login key="login" onModeSelect={setChatMode} />}
+        {screen === 'chat' && <ChatRoom key="chat" user={user} initialMode={chatMode} />}
         {screen === 'admin' && <AdminDashboard key="admin" />}
       </AnimatePresence>
     </SocketContext.Provider>

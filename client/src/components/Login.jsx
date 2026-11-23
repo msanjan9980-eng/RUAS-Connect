@@ -1,19 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSocket } from '../App';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Video, MessageCircle } from 'lucide-react';
 
-export default function Login() {
+export default function Login({ onModeSelect }) {
   const socket = useSocket();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [mode, setMode] = useState('video');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const onError = (msg) => { setError(msg); setLoading(false); };
+    socket.on('auth_error', onError);
+    return () => socket.off('auth_error', onError);
+  }, [socket]);
+
   const handleSubmit = (e) => {
-    e.preventDefault(); setError(''); setLoading(true);
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    onModeSelect(mode);
     socket.emit('direct_login', { email, password });
-    socket.once('auth_error', (msg) => { setError(msg); setLoading(false); });
   };
 
   return (
@@ -22,7 +31,7 @@ export default function Login() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]"></div>
         <div className="relative z-10">
           <div className="w-10 h-10 border border-white/20 flex items-center justify-center rounded-md">
-            <span className="font-serif italic text-xl">CL</span>
+            <span className="font-serif italic text-xl text-white">CL</span>
           </div>
         </div>
         <div className="relative z-10 pb-12">
@@ -39,11 +48,20 @@ export default function Login() {
         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4, duration: 0.6 }} className="w-full max-w-sm">
           <div className="mb-12 lg:hidden">
             <div className="w-10 h-10 border border-white/20 flex items-center justify-center rounded-md">
-              <span className="font-serif italic text-xl">CL</span>
+              <span className="font-serif italic text-xl text-white">CL</span>
             </div>
           </div>
           <h2 className="text-3xl font-serif mb-2 text-white">Authentication.</h2>
-          <p className="text-muted text-sm mb-10">Enter your credentials to access the network.</p>
+          <p className="text-muted text-sm mb-6">Select your preferred mode to enter.</p>
+
+          <div className="flex gap-2 mb-6">
+            <button type="button" onClick={() => setMode('video')} className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium rounded-full border transition-all ${mode === 'video' ? 'bg-white text-black border-white' : 'bg-transparent text-muted border-border hover:border-white'}`}>
+              <Video size={16} /> Video
+            </button>
+            <button type="button" onClick={() => setMode('text')} className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium rounded-full border transition-all ${mode === 'text' ? 'bg-white text-black border-white' : 'bg-transparent text-muted border-border hover:border-white'}`}>
+              <MessageCircle size={16} /> Text Only
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="relative group">
